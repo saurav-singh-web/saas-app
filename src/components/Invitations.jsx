@@ -72,24 +72,24 @@ function Invitations({ user, onAccepted, showToast }) {
   if (invitations.length === 0) return null
 
   return (
-    <div className="bg-indigo-950 border border-indigo-800 rounded-xl p-5 mb-6">
-      <h3 className="text-sm font-semibold text-indigo-300 uppercase tracking-wider mb-3">Pending Invitations</h3>
+    <div className="bg-indigo-950 border border-indigo-800 rounded-xl p-4 sm:p-5 mb-6">
+      <h3 className="text-xs font-semibold text-indigo-300 uppercase tracking-wider mb-3">Pending Invitations</h3>
       <div className="space-y-3">
         {invitations.map(invite => (
-          <div key={invite.id} className="flex items-center justify-between bg-indigo-900 rounded-lg px-4 py-3">
+          <div key={invite.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-indigo-900 rounded-lg px-4 py-3 gap-3">
             <p className="text-sm text-white">
               Invited to <strong>{invite.organizations?.name}</strong>
             </p>
-            <div className="flex gap-2 ml-4">
+            <div className="flex gap-2 shrink-0">
               <button
                 onClick={() => handleAccept(invite)}
-                className="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg transition"
+                className="flex-1 sm:flex-none text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg transition"
               >
                 Accept
               </button>
               <button
                 onClick={() => handleDecline(invite)}
-                className="text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg transition"
+                className="flex-1 sm:flex-none text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg transition"
               >
                 Decline
               </button>
