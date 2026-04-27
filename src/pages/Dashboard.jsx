@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../supabaseClient'
 import CreateOrg from '../components/CreateOrg'
 import OrgPanel from '../components/OrgPanel'
+import { useNavigate } from 'react-router-dom'
 import Invitations from '../components/Invitations'
 import useOrganizations from '../hooks/useOrganizations'
 
@@ -9,6 +10,34 @@ function Dashboard({ user, showToast }) {
   const { organizations, loading, fetchOrganizations } = useOrganizations()
   const [selectedOrg, setSelectedOrg] = useState(null)
   const [showCreate, setShowCreate] = useState(false)
+  const [role, setRole] = useState('viewer')
+  const navigate = useNavigate()
+
+useEffect(() => {
+  async function fetchRole() {
+    if (!selectedOrg) return
+
+    const { data: userData } = await supabase.auth.getUser()
+    const user = userData.user
+
+    if (!user) {
+      setRole('viewer')
+      return
+    }
+
+    const { data } = await supabase
+      .from('organization_members')
+      .select('role')
+      .eq('org_id', selectedOrg.id) // ✅ FIXED
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    setRole(data?.role || 'viewer')
+  }
+
+   fetchRole()
+}, [selectedOrg])
+
 
   async function handleLogout() {
     const { error } = await supabase.auth.signOut()
@@ -64,7 +93,7 @@ function Dashboard({ user, showToast }) {
             {organizations.map(org => (
               <div
                 key={org.id}
-                onClick={() => setSelectedOrg(org)}
+                onClick={() => navigate(`/org/${org.slug}`)}
                 className="bg-gray-900 border border-gray-800 rounded-xl p-5 cursor-pointer hover:border-indigo-500 transition"
               >
                 <h3 className="text-base sm:text-lg font-semibold text-white">{org.name}</h3>
@@ -83,6 +112,7 @@ function Dashboard({ user, showToast }) {
           onClose={() => setSelectedOrg(null)}
           onLeft={fetchOrganizations}
           showToast={showToast}
+          role={role} 
         />
       )}
     </div>
