@@ -57,13 +57,25 @@ function PostsFeed({ user }) {
   }
 
   async function fetchOrgs() {
-    const { data, error } = await supabase
-      .from('organizations')
-      .select('id, name')
+  const { data, error } = await supabase
+    .from('posts')
+    .select('org_id, organizations(id, name)')
+    .eq('status', 'approved')
+    .eq('is_public', true)
 
-    if (error) return
-    setOrgs(data)
-  }
+  if (error) return
+
+  // get unique orgs
+  const unique = []
+  const seen = new Set()
+  data.forEach(p => {
+    if (p.organizations && !seen.has(p.org_id)) {
+      seen.add(p.org_id)
+      unique.push({ id: p.org_id, name: p.organizations.name })
+    }
+  })
+  setOrgs(unique)
+}
   async function fetchUserLikes() {
     const { data, error } = await supabase
       .from('likes')

@@ -11,11 +11,15 @@ function OrgPage({ user, showToast }) {
   const [posts, setPosts] = useState([])
   const [members, setMembers] = useState([])
   const [loading, setLoading] = useState(true)
-
-  // Create post form
+  const [comments, setComments] = useState({})
+  const [commentInputs, setCommentInputs] = useState({})
+  const [showComments, setShowComments] = useState({})
   const [title, setTitle] = useState('')
   const [content, setContent] = useState('')
   const [showForm, setShowForm] = useState(false)
+  const [likedPosts, setLikedPosts] = useState(new Set())
+  const [likeCounts, setLikeCounts] = useState({})
+  const [inviteEmail, setInviteEmail] = useState('')
 
   useEffect(() => {
     fetchOrgData()
@@ -82,7 +86,49 @@ function OrgPage({ user, showToast }) {
     }
 
     setPosts(data)
+    if (data.length > 0) fetchLikes(data.map(p => p.id))
+
   }
+
+  async function fetchLikes(postIds) {
+  if (postIds.length === 0) return
+
+  const counts = {}
+  await Promise.all(postIds.map(async (id) => {
+    const { count } = await supabase
+      .from('likes')
+      .select('id', { count: 'exact' })
+      .eq('post_id', id)
+    counts[id] = count || 0
+  }))
+  setLikeCounts(counts)
+
+  const { data } = await supabase
+    .from('likes')
+    .select('post_id')
+    .eq('user_id', user.id)
+    .in('post_id', postIds)
+
+  if (data) setLikedPosts(new Set(data.map(l => l.post_id)))
+}
+
+async function handleLike(postId) {
+  const alreadyLiked = likedPosts.has(postId)
+
+  if (alreadyLiked) {
+    await supabase.from('likes').delete()
+      .eq('post_id', postId)
+      .eq('user_id', user.id)
+
+    setLikedPosts(prev => { const next = new Set(prev); next.delete(postId); return next })
+    setLikeCounts(prev => ({ ...prev, [postId]: (prev[postId] || 1) - 1 }))
+  } else {
+    await supabase.from('likes').insert({ post_id: postId, user_id: user.id })
+
+    setLikedPosts(prev => new Set([...prev, postId]))
+    setLikeCounts(prev => ({ ...prev, [postId]: (prev[postId] || 0) + 1 }))
+  }
+}
 
   async function handleCreatePost() {
     if (!title || !content) {
@@ -167,6 +213,124 @@ function OrgPage({ user, showToast }) {
   fetchOrgData()
 }
 
+async function handleInvite() {
+  const { data: profileData, error: profileError } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('email', inviteEmail)
+    .maybeSingle()
+
+  if (profileError || !profileData) {
+    showToast('No user found with that email.', 'error')
+    return
+  }
+
+  const isAlreadyMember = members.some(m => m.user_id === profileData.id)
+  if (isAlreadyMember) {
+    showToast('This user is already a member.', 'error')
+    return
+  }
+
+  const { data: existingInvite } = await supabase
+    .from('invitations')
+    .select('status')
+    .eq('org_id', org.id)
+    .eq('invited_user_id', profileData.id)
+    .maybeSingle()
+
+  if (existingInvite?.status === 'accepted') {
+    showToast('This user is already a member.', 'error')
+    return
+  }
+
+  if (existingInvite?.status === 'pending') {
+    showToast('Invite already sent. Waiting for user to accept.', 'info')
+    return
+  }
+
+  await supabase
+    .from('invitations')
+    .delete()
+    .eq('org_id', org.id)
+    .eq('invited_user_id', profileData.id)
+
+  const { error: insertError } = await supabase
+    .from('invitations')
+    .insert({
+      org_id: org.id,
+      invited_by: user.id,
+      invited_user_id: profileData.id
+    })
+
+  if (insertError) {
+    showToast(insertError.message, 'error')
+    return
+  }
+
+  showToast('Invite sent! Waiting for user to accept.', 'success')
+  setInviteEmail('')
+}
+
+
+
+async function fetchComments(postId) {
+  const { data, error } = await supabase
+    .from('comments')
+    .select('id, content, created_at, user_id, profiles!comments_user_id_fkey(email)')
+    .eq('post_id', postId)
+    .order('created_at', { ascending: true })
+
+  if (error) {
+    console.log('Error fetching comments:', error.message)
+    return
+  }
+
+  setComments(prev => ({ ...prev, [postId]: data }))
+}
+
+async function handleAddComment(postId) {
+  const content = commentInputs[postId]?.trim()
+  if (!content) return
+
+  const { error } = await supabase
+    .from('comments')
+    .insert({
+      post_id: postId,
+      user_id: user.id,
+      content
+    })
+
+  if (error) {
+    showToast(error.message, 'error')
+    return
+  }
+
+  setCommentInputs(prev => ({ ...prev, [postId]: '' }))
+  fetchComments(postId)
+}
+
+async function handleDeleteComment(commentId, postId) {
+  if (!window.confirm('Delete this comment?')) return
+
+  const { error } = await supabase
+    .from('comments')
+    .delete()
+    .eq('id', commentId)
+
+  if (error) {
+    showToast('Failed to delete comment.', 'error')
+    return
+  }
+
+  showToast('Comment deleted.', 'info')
+  fetchComments(postId)
+}
+
+function toggleComments(postId) {
+  setShowComments(prev => ({ ...prev, [postId]: !prev[postId] }))
+  if (!comments[postId]) fetchComments(postId)
+}
+
   return (
     <div className="min-h-screen bg-gray-950 text-white">
       {/* Navbar */}
@@ -248,19 +412,89 @@ function OrgPage({ user, showToast }) {
                 <p className="text-gray-400 text-sm leading-relaxed">{post.content}</p>
 
                 {/* Footer */}
-                <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-800">
-                  <p className="text-xs text-gray-500">
-                    by <span className="text-gray-400">{post.profiles?.email}</span>
-                  </p>
-                  {canApprove && post.status === 'pending' && (
-                    <button
-                      onClick={() => handleApprove(post.id)}
-                      className="text-xs bg-green-700 hover:bg-green-600 text-white px-3 py-1.5 rounded-lg transition"
-                    >
-                      Approve
-                    </button>
-                  )}
-                </div>
+                {/* Footer */}
+<div className="mt-4 pt-3 border-t border-gray-800">
+  <div className="flex items-center justify-between">
+    <p className="text-xs text-gray-500">
+      by <span className="text-gray-400">{post.profiles?.email}</span>
+    </p>
+    <div className="flex items-center gap-2">
+  {canApprove && post.status === 'pending' && (
+    <button
+      onClick={() => handleApprove(post.id)}
+      className="text-xs bg-green-700 hover:bg-green-600 text-white px-3 py-1.5 rounded-lg transition"
+    >
+      Approve
+    </button>
+  )}
+  <button
+    onClick={() => handleLike(post.id)}
+    className={`flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg transition ${
+      likedPosts.has(post.id)
+        ? 'bg-red-900 text-red-400 hover:bg-red-800'
+        : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+    }`}
+  >
+    <span>{likedPosts.has(post.id) ? '❤️' : '🤍'}</span>
+    <span>{likeCounts[post.id] || 0}</span>
+  </button>
+  <button
+    onClick={() => toggleComments(post.id)}
+    className="text-xs bg-gray-800 hover:bg-gray-700 text-gray-400 px-3 py-1.5 rounded-lg transition"
+  >
+    💬 {showComments[post.id] ? 'Hide' : 'Comments'}
+  </button>
+</div>
+  </div>
+
+  {/* Comments section */}
+  {showComments[post.id] && (
+    <div className="mt-4 space-y-3">
+      {/* Comments list */}
+      {(comments[post.id] || []).length === 0 ? (
+        <p className="text-xs text-gray-500">No comments yet.</p>
+      ) : (
+        (comments[post.id] || []).map(comment => (
+          <div key={comment.id} className="flex items-start gap-2 bg-gray-800 rounded-lg px-3 py-2">
+            <div className="w-6 h-6 rounded-full bg-indigo-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
+              {comment.profiles?.email?.slice(0, 1).toUpperCase()}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-gray-400 font-medium">{comment.profiles?.email}</p>
+              <p className="text-sm text-white mt-0.5">{comment.content}</p>
+            </div>
+            {(comment.user_id === user.id || ['admin', 'owner'].includes(role)) && (
+              <button
+                onClick={() => handleDeleteComment(comment.id, post.id)}
+                className="text-xs text-red-400 hover:text-red-300 transition shrink-0"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+        ))
+      )}
+
+      {/* Add comment input */}
+      <div className="flex gap-2 mt-2">
+        <input
+          type="text"
+          placeholder="Write a comment..."
+          value={commentInputs[post.id] || ''}
+          onChange={(e) => setCommentInputs(prev => ({ ...prev, [post.id]: e.target.value }))}
+          onKeyDown={(e) => e.key === 'Enter' && handleAddComment(post.id)}
+          className="flex-1 bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        />
+        <button
+          onClick={() => handleAddComment(post.id)}
+          className="bg-indigo-600 hover:bg-indigo-500 text-white text-sm px-3 py-2 rounded-lg transition"
+        >
+          Post
+        </button>
+      </div>
+    </div>
+  )}
+</div>
               </div>
             ))
           )}
@@ -311,7 +545,29 @@ function OrgPage({ user, showToast }) {
               )
             })}
           </div>
+          {/* Invite section */}
+{(role === 'owner' || role === 'admin') && (
+  <div className="mt-4">
+    <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
+      Invite a Member
+    </h2>
+    <input
+      type="email"
+      placeholder="Enter their email"
+      value={inviteEmail}
+      onChange={(e) => setInviteEmail(e.target.value)}
+      className="w-full bg-gray-900 border border-gray-700 text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-2"
+    />
+    <button
+      onClick={handleInvite}
+      className="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-lg px-4 py-2.5 transition"
+    >
+      Send Invite
+    </button>
+  </div>
+)}
         </div>
+
 
       </div>
     </div>
