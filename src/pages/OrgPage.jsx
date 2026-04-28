@@ -323,7 +323,7 @@ async function handleUpdateTeamLimit(userId, newLimit) {
         alert('Member not found in this team. Please type the exact email from the list.')
         continue
       }
-
+     //done
       const member = currentTeam[memberIndex]
       const { error: removeError } = await supabase
         .from('organization_members')
