@@ -24,7 +24,7 @@ function OrgPage({ user, showToast }) {
   const [editTitle, setEditTitle] = useState('')
   const [editContent, setEditContent] = useState('')
   const [contentMakers, setContentMakers] = useState([]) 
-
+  const [showMembers, setShowMembers] = useState(false)
   useEffect(() => {
     fetchOrgData()
   }, [slug])
@@ -597,38 +597,52 @@ function toggleComments(postId) {
 }
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
+    <div className="relative min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 text-white overflow-hidden">
+  <div className="absolute w-[300px] sm:w-[500px] h-[300px] sm:h-[500px] bg-indigo-600/10 blur-3xl rounded-full top-[-100px] left-[-100px]" />
       {/* Navbar */}
-      <div className="border-b border-gray-800 bg-gray-900 px-4 sm:px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => navigate('/')}
-            className="text-gray-400 hover:text-white transition text-sm"
-          >
-            ← Back
-          </button>
-          <h1 className="text-lg font-bold text-white">{org?.name}</h1>
-          <span className="text-xs text-gray-500">{org?.country}</span>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 justify-end">
-          <button
-            onClick={() => navigate('/posts')}
-            className="text-xs sm:text-sm px-3 sm:px-4 py-1.5 rounded-lg w-full sm:w-auto"
-          >
-            All Posts
-          </button>
-          {canCreatePost && (
-            <button
-              onClick={() => setShowForm(!showForm)}
-              className="text-sm bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-1.5 rounded-lg transition"
-            >
-              {showForm ? 'Cancel' : '+ New Post'}
-            </button>
-          )}
-        </div>
-      </div>
+      {/* Navbar */}
+<div className="relative border-b border-gray-800 bg-gray-900/70 backdrop-blur-xl px-3 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
+  {/* Left — Logo as back button */}
+  <div
+    onClick={() => navigate('/')}
+    className="flex items-center gap-2 cursor-pointer group"
+  >
+    <div className="h-8 w-8 sm:h-9 sm:w-9 bg-indigo-600 rounded-lg flex items-center justify-center font-bold group-hover:bg-indigo-500 transition">
+      A
+    </div>
+    <div>
+      <h1 className="text-base sm:text-xl font-semibold tracking-tight">{org?.name}</h1>
+      <p className="text-[10px] text-gray-400">{org?.country}</p>
+    </div>
+  </div>
+
+  {/* Right — Actions */}
+  <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+    <button
+      onClick={() => navigate('/posts')}
+      className="text-xs sm:text-sm bg-gray-800 hover:bg-gray-700 text-white px-3 py-1.5 rounded-lg transition"
+    >
+      All Posts
+    </button>
+    <button
+      onClick={() => setShowMembers(true)}
+      className="text-xs sm:text-sm bg-gray-800 hover:bg-gray-700 text-white px-3 sm:px-4 py-1.5 rounded-lg transition"
+    >
+      👥 Members
+    </button>
+    {canCreatePost && (
+      <button
+        onClick={() => setShowForm(!showForm)}
+        className="text-xs sm:text-sm bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-1.5 rounded-lg transition shadow"
+      >
+        {showForm ? 'Cancel' : '+ New Post'}
+      </button>
+    )}
+  </div>
+</div>
+
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
 
         {/* Left — Posts */}
         <div className="lg:col-span-2 space-y-4">
@@ -661,6 +675,9 @@ function toggleComments(postId) {
           )}
 
           {/* Posts list */}
+          {!showForm && (
+            <>
+  
           <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Posts</h2>
 
           {posts.length === 0 ? (
@@ -785,7 +802,7 @@ function toggleComments(postId) {
   (role === 'content_maker' && post.assigned_to === user.id)) && (
   <button
     onClick={() => handleEditPost(post)}
-    className="text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg transition"
+    className="text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg transition mt-3"
   >
     Edit
   </button>
@@ -838,16 +855,164 @@ function toggleComments(postId) {
     </div>
   )}
 </div>
-              </div>
-            ))
-          )}
-        </div>
+</div> 
+))
+)}
+</>
+)}
+</div>
 
-        {/* Right — Members */}
-        <div>
-          <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">Members</h2>
-          <div className="space-y-2">
-            {members.map(member => {
+{/* Members slide panel */}
+<>
+  {showMembers && (
+    <div
+      className="fixed inset-0 bg-black/50 z-40"
+      onClick={() => setShowMembers(false)}
+    />
+  )}
+
+  <div className={`fixed top-0 right-0 h-screen w-full sm:w-96 bg-gray-900 border-l border-gray-800 shadow-2xl z-50 flex flex-col transition-transform duration-300 ${showMembers ? 'translate-x-0' : 'translate-x-full'}`}>
+
+    <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-800">
+      <h2 className="text-base font-bold text-white">Members ({members.length})</h2>
+      <button onClick={() => setShowMembers(false)} className="text-gray-400 hover:text-white transition text-xl">✕</button>
+    </div>
+
+    <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-4">
+
+      {/* Owner */}
+{members.filter(m => m.role === 'owner').length > 0 && (
+  <div>
+    <h3 className="text-xs font-semibold text-yellow-500 uppercase tracking-wider mb-2">👑 Owner</h3>
+    <div className="space-y-2">
+      {members.filter(m => m.role === 'owner').map(member => (
+        <MemberCard key={member.user_id} member={member} members={members} role={role} user={user} handleRoleChange={handleRoleChange} handleRemoveMember={handleRemoveMember} handleUpdateTeamLimit={handleUpdateTeamLimit} />
+      ))}
+    </div>
+  </div>
+)}
+
+{/* Admins */}
+{members.filter(m => m.role === 'admin').length > 0 && (
+  <div>
+    <h3 className="text-xs font-semibold text-blue-400 uppercase tracking-wider mb-2">🛡️ Admins</h3>
+    <div className="space-y-2">
+      {members.filter(m => m.role === 'admin').map(member => (
+        <MemberCard key={member.user_id} member={member} members={members} role={role} user={user} handleRoleChange={handleRoleChange} handleRemoveMember={handleRemoveMember} handleUpdateTeamLimit={handleUpdateTeamLimit} />
+      ))}
+    </div>
+  </div>
+)}
+
+{/* Team Leaders and their Content Makers */}
+{members.filter(m => m.role === 'team_leader').length > 0 && (
+  <div>
+    <h3 className="text-xs font-semibold text-orange-400 uppercase tracking-wider mb-2">🏆 Teams</h3>
+    <div className="space-y-3">
+      {members.filter(m => m.role === 'team_leader').map(leader => {
+        const teamMembers = members.filter(m => m.manager_id === leader.user_id)
+        return (
+          <div key={leader.user_id} className="border border-gray-700 rounded-xl p-3">
+            <MemberCard member={leader} members={members} role={role} user={user} handleRoleChange={handleRoleChange} handleRemoveMember={handleRemoveMember} handleUpdateTeamLimit={handleUpdateTeamLimit} />
+            {teamMembers.length > 0 && (
+              <div className="mt-2 pl-3 border-l border-gray-700 space-y-2">
+                <p className="text-xs text-gray-500">Content Makers</p>
+                {teamMembers.map(cm => (
+                  <MemberCard key={cm.user_id} member={cm} members={members} role={role} user={user} handleRoleChange={handleRoleChange} handleRemoveMember={handleRemoveMember} handleUpdateTeamLimit={handleUpdateTeamLimit} />
+                ))}
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  </div>
+)}
+
+{/* Content Makers without a team leader */}
+{members.filter(m => m.role === 'content_maker' && !m.manager_id).length > 0 && (
+  <div>
+    <h3 className="text-xs font-semibold text-purple-400 uppercase tracking-wider mb-2">🎨 Unassigned Content Makers</h3>
+    <div className="space-y-2">
+      {members.filter(m => m.role === 'content_maker' && !m.manager_id).map(member => (
+        <MemberCard key={member.user_id} member={member} members={members} role={role} user={user} handleRoleChange={handleRoleChange} handleRemoveMember={handleRemoveMember} handleUpdateTeamLimit={handleUpdateTeamLimit} />
+      ))}
+    </div>
+  </div>
+)}
+
+{/* Members */}
+{members.filter(m => m.role === 'member').length > 0 && (
+  <div>
+    <h3 className="text-xs font-semibold text-green-400 uppercase tracking-wider mb-2">👥 Members</h3>
+    <div className="space-y-2">
+      {members.filter(m => m.role === 'member').map(member => (
+        <MemberCard key={member.user_id} member={member} members={members} role={role} user={user} handleRoleChange={handleRoleChange} handleRemoveMember={handleRemoveMember} handleUpdateTeamLimit={handleUpdateTeamLimit} />
+      ))}
+    </div>
+  </div>
+)}
+
+      {(role === 'owner' || role === 'admin') && (
+        <div className="mt-2">
+          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Invite a Member</h3>
+          <input
+            type="email"
+            placeholder="Enter their email"
+            value={inviteEmail}
+            onChange={(e) => setInviteEmail(e.target.value)}
+            className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-2"
+          />
+          <button
+            onClick={handleInvite}
+            className="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-lg px-4 py-2.5 transition"
+          >
+            Send Invite
+          </button>
+        </div>
+      )}
+
+      {role === 'owner' && (
+        <div className="mt-2 border border-red-900 rounded-xl p-4">
+          <h2 className="text-sm font-semibold text-red-400 uppercase tracking-wider mb-3">Danger Zone</h2>
+          <div className="mb-4">
+            <p className="text-xs text-gray-400 mb-2">Transfer ownership to an admin:</p>
+            <div className="space-y-2">
+              {members.filter(m => m.role === 'admin').map(member => (
+                <div key={member.user_id} className="flex items-center justify-between bg-gray-800 rounded-lg px-3 py-2">
+                  <p className="text-xs text-white truncate">{member.profiles?.email}</p>
+                  <button
+                    onClick={() => handleTransferOwnership(member.user_id)}
+                    className="text-xs bg-yellow-700 hover:bg-yellow-600 text-white px-2 py-1 rounded-lg transition ml-2 shrink-0"
+                  >
+                    Transfer
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+          <button
+            onClick={handleDeleteOrg}
+            className="w-full bg-red-900 hover:bg-red-800 text-red-400 text-sm font-medium rounded-lg px-4 py-2.5 transition"
+          >
+            Delete Organization
+          </button>
+        </div>
+      )}
+
+    </div>
+  </div>
+</>
+
+
+      </div>
+    </div>
+    
+  )
+}
+
+
+function MemberCard({ member, members, role, user, handleRoleChange, handleRemoveMember, handleUpdateTeamLimit }) {
   const email = member.profiles?.email || 'Unknown'
   const initials = email.slice(0, 2).toUpperCase()
   const roleBadgeColor = {
@@ -862,8 +1027,8 @@ function toggleComments(postId) {
   const myContentMakers = members.filter(m => m.manager_id === member.user_id)
 
   return (
-    <div key={member.user_id} className="bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 hover:border-gray-700 transition">
-      <div className="flex items-start sm:items-center gap-3 flex-wrap">
+    <div className="bg-gray-800 rounded-xl px-4 py-3">
+      <div className="flex items-center gap-3">
         <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
           {initials}
         </div>
@@ -873,7 +1038,7 @@ function toggleComments(postId) {
             <select
               value={member.role}
               onChange={(e) => handleRoleChange(member.user_id, e.target.value)}
-              className="mt-1 bg-gray-800 text-white text-xs rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500 w-full"
+              className="mt-1 bg-gray-700 text-white text-xs rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500 w-full"
             >
               <option value="member">Member</option>
               <option value="content_maker">Content Maker</option>
@@ -886,30 +1051,20 @@ function toggleComments(postId) {
             </span>
           )}
 
-          {/* Show manager for content_maker */}
-          {member.role === 'content_maker' && member.manager_id && (
-            <p className="text-xs text-indigo-400 mt-1 font-semibold">
-              Belongs to Team: <span className="text-white">
-                {members.find(m => m.user_id === member.manager_id)?.profiles?.email || 'Unknown'}
-              </span>
-            </p>
-          )}
-
-          {/* Show team info for team_leader */}
           {member.role === 'team_leader' && (
             <div className="mt-1">
-              <p className="text-xs text-indigo-400 font-semibold mb-1">
-                Content Makers: <span className="text-white">{myContentMakers.length} / {member.team_size_limit || 0}</span>
+              <p className="text-xs text-indigo-400 font-semibold">
+                Team: <span className="text-white">{myContentMakers.length} / {member.team_size_limit || 0}</span>
               </p>
               {(role === 'owner' || role === 'admin') && (
-                <div className="flex flex-wrap items-center gap-1 mt-1">
+                <div className="flex items-center gap-1 mt-1">
                   <span className="text-xs text-gray-500">Limit:</span>
                   <input
                     type="number"
                     defaultValue={member.team_size_limit || 0}
                     min={myContentMakers.length || 1}
                     onBlur={(e) => handleUpdateTeamLimit(member.user_id, e.target.value)}
-                    className="w-14 bg-gray-800 text-white text-xs rounded px-2 py-0.5 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                    className="w-14 bg-gray-700 text-white text-xs rounded px-2 py-0.5 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                   />
                 </div>
               )}
@@ -917,7 +1072,6 @@ function toggleComments(postId) {
           )}
         </div>
 
-        {/* Remove button */}
         {(role === 'owner' || (role === 'admin' && !['owner', 'admin'].includes(member.role)))
           && member.user_id !== user.id && (
           <button
@@ -927,74 +1081,6 @@ function toggleComments(postId) {
             Remove
           </button>
         )}
-      </div>
-    </div>
-  )
-})}
-          </div>
-          {/* Invite section */}
-{(role === 'owner' || role === 'admin') && (
-  <div className="mt-4">
-    <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
-      Invite a Member
-    </h2>
-    <input
-      type="email"
-      placeholder="Enter their email"
-      value={inviteEmail}
-      onChange={(e) => setInviteEmail(e.target.value)}
-      className="w-full bg-gray-900 border border-gray-700 text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 mb-2"
-    />
-    <button
-      onClick={handleInvite}
-      className="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-lg px-4 py-2.5 transition"
-    >
-      Send Invite
-    </button>
-  </div>
-)}
-
-
-{/* Danger zone — owner only */}
-{role === 'owner' && (
-  <div className="mt-6 border border-red-900 rounded-xl p-4">
-    <h2 className="text-sm font-semibold text-red-400 uppercase tracking-wider mb-3">
-      Danger Zone
-    </h2>
-
-    {/* Transfer ownership */}
-    <div className="mb-4">
-      <p className="text-xs text-gray-400 mb-2">Transfer ownership to a member:</p>
-      <div className="space-y-2">
-        {members
-          .filter(m => m.role === 'admin')
-          .map(member => (
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 bg-gray-800 rounded-lg px-3 py-2">
-              <p className="text-xs text-white truncate">{member.profiles?.email}</p>
-              <button
-                onClick={() => handleTransferOwnership(member.user_id)}
-                className="text-xs bg-yellow-700 hover:bg-yellow-600 text-white px-2 py-1 rounded-lg transition ml-2 shrink-0 whitespace-nowrap"
-              >
-                Transfer
-              </button>
-            </div>
-          ))
-        }
-      </div>
-    </div>
-
-    {/* Delete org */}
-    <button
-      onClick={handleDeleteOrg}
-      className="w-full bg-red-900 hover:bg-red-800 text-red-400 text-sm font-medium rounded-lg px-4 py-2.5 transition"
-    >
-      Delete Organization
-    </button>
-  </div>
-)}
-        </div>
-
-
       </div>
     </div>
   )
