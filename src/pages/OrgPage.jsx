@@ -20,6 +20,10 @@ function OrgPage({ user, showToast }) {
   const [likedPosts, setLikedPosts] = useState(new Set())
   const [likeCounts, setLikeCounts] = useState({})
   const [inviteEmail, setInviteEmail] = useState('')
+  const [editingPost, setEditingPost] = useState(null)
+  const [editTitle, setEditTitle] = useState('')
+  const [editContent, setEditContent] = useState('')
+  const [contentMakers, setContentMakers] = useState([]) 
 
   useEffect(() => {
     fetchOrgData()
@@ -66,29 +70,29 @@ function OrgPage({ user, showToast }) {
   }
 
   async function fetchPosts(orgId) {
-    const { data, error } = await supabase
-      .from('posts')
-      .select(`
-        id,
-        title,
-        content,
-        status,
-        is_public,
-        created_at,
-        profiles!posts_created_by_fkey(email)
-      `)
-      .eq('org_id', orgId)
-      .order('created_at', { ascending: false })
+  const { data, error } = await supabase
+    .from('posts')
+    .select(`
+      id,
+      title,
+      content,
+      status,
+      is_public,
+      created_at,
+      assigned_to,
+      profiles!posts_created_by_fkey(email)
+    `)
+    .eq('org_id', orgId)
+    .order('created_at', { ascending: false })
 
-    if (error) {
-      console.log('Error fetching posts:', error.message)
-      return
-    }
-
-    setPosts(data)
-    if (data.length > 0) fetchLikes(data.map(p => p.id))
-
+  if (error) {
+    console.log('Error fetching posts:', error.message)
+    return
   }
+
+  setPosts(data)
+  if (data.length > 0) fetchLikes(data.map(p => p.id))
+}
 
   async function fetchLikes(postIds) {
   if (postIds.length === 0) return
@@ -184,6 +188,7 @@ async function handleLike(postId) {
 
   const canCreatePost = ['content_maker', 'team_leader', 'admin', 'owner'].includes(role)
   const canApprove = ['team_leader', 'admin', 'owner'].includes(role)
+  const contentMakersList = members.filter(m => m.role === 'content_maker')
 
   const statusBadge = {
     approved: 'bg-green-500 text-green-950',
@@ -300,6 +305,43 @@ async function handleDeletePost(postId) {
   }
 
   showToast('Post deleted.', 'info')
+  fetchPosts(org.id)
+}
+
+async function handleEditPost(post) {
+  setEditingPost(post.id)
+  setEditTitle(post.title)
+  setEditContent(post.content)
+}
+
+async function handleSaveEdit(postId) {
+  const { error } = await supabase
+    .from('posts')
+    .update({ title: editTitle, content: editContent })
+    .eq('id', postId)
+
+  if (error) {
+    showToast('Failed to update post.', 'error')
+    return
+  }
+
+  showToast('Post updated successfully.', 'success')
+  setEditingPost(null)
+  fetchPosts(org.id)
+}
+
+async function handleAssign(postId, userId) {
+  const { error } = await supabase
+    .from('posts')
+    .update({ assigned_to: userId || null })
+    .eq('id', postId)
+
+  if (error) {
+    showToast('Failed to assign post.', 'error')
+    return
+  }
+
+  showToast(userId ? 'Post assigned.' : 'Assignment removed.', 'success')
   fetchPosts(org.id)
 }
 
@@ -488,8 +530,61 @@ function toggleComments(postId) {
                 </div>
 
                 {/* Content */}
-                <h3 className="text-base font-bold text-white mb-1">{post.title}</h3>
-                <p className="text-gray-400 text-sm leading-relaxed">{post.content}</p>
+                {/* Content — show edit form or normal view */}
+{editingPost === post.id ? (
+  <div className="space-y-2 mb-3">
+    <input
+      type="text"
+      value={editTitle}
+      onChange={(e) => setEditTitle(e.target.value)}
+      className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+    />
+    <textarea
+      value={editContent}
+      onChange={(e) => setEditContent(e.target.value)}
+      rows={3}
+      className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+    />
+    <div className="flex gap-2">
+      <button
+        onClick={() => handleSaveEdit(post.id)}
+        className="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg transition"
+      >
+        Save
+      </button>
+      <button
+        onClick={() => setEditingPost(null)}
+        className="text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg transition"
+      >
+        Cancel
+      </button>
+    </div>
+  </div>
+) : (
+  <>
+    <h3 className="text-base font-bold text-white mb-1">{post.title}</h3>
+    <p className="text-gray-400 text-sm leading-relaxed">{post.content}</p>
+  </>
+)}
+
+{/* Assign to content maker — team_leader, admin, owner only */}
+{['team_leader', 'admin', 'owner'].includes(role) && contentMakersList.length > 0 && (
+  <div className="mt-2 flex items-center gap-2">
+    <span className="text-xs text-gray-500">Assigned to:</span>
+    <select
+      value={post.assigned_to || ''}
+      onChange={(e) => handleAssign(post.id, e.target.value)}
+      className="bg-gray-800 text-white text-xs rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+    >
+      <option value="">None</option>
+      {contentMakersList.map(m => (
+        <option key={m.user_id} value={m.user_id}>
+          {m.profiles?.email}
+        </option>
+      ))}
+    </select>
+  </div>
+)}
 
                 {/* Footer */}
                 {/* Footer */}
@@ -534,7 +629,16 @@ function toggleComments(postId) {
   </button>
 </div>
   </div>
-
+{/* Edit button */}
+{(['team_leader', 'admin', 'owner'].includes(role) ||
+  (role === 'content_maker' && post.assigned_to === user.id)) && (
+  <button
+    onClick={() => handleEditPost(post)}
+    className="text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg transition"
+  >
+    Edit
+  </button>
+)}
   {/* Comments section */}
   {showComments[post.id] && (
     <div className="mt-4 space-y-3">
