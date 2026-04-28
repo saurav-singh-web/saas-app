@@ -47,7 +47,7 @@ function OrgPage({ user, showToast }) {
     // Step 2 — get current user's role
     const { data: memberData } = await supabase
       .from('organization_members')
-      .select('role')
+      .select('role, user_id, manager_id, team_size_limit, profiles!fk_user_profile(email)')
       .eq('org_id', orgData.id)
       .eq('user_id', user.id)
       .maybeSingle()
@@ -57,7 +57,7 @@ function OrgPage({ user, showToast }) {
     // Step 3 — get members
     const { data: membersData } = await supabase
       .from('organization_members')
-      .select('role, user_id, profiles!fk_user_profile(email)')
+      .select('role, user_id, manager_id, team_size_limit, profiles!fk_user_profile(email)')
       .eq('org_id', orgData.id)
 
     setMembers(membersData || [])
@@ -294,8 +294,57 @@ async function handleUpdateTeamLimit(userId, newLimit) {
   }
 
   if (limit < count) {
-    showToast(`This team leader already has ${count} content makers. Limit must be at least ${count}.`, 'error')
-    return
+    const toRemove = count - limit
+    if (!window.confirm(`This team leader has ${count} content makers, which exceeds the new limit of ${limit}. You must remove ${toRemove} member(s) before updating. Proceed to select members to remove?`)) {
+      fetchOrgData()
+      return
+    }
+
+    const { data: teamMembers } = await supabase
+      .from('organization_members')
+      .select('user_id, profiles!fk_user_profile(email)')
+      .eq('org_id', org.id)
+      .eq('manager_id', userId)
+      .eq('role', 'content_maker')
+
+    let removed = 0
+    let currentTeam = [...(teamMembers || [])]
+
+    while (removed < toRemove) {
+      const email = window.prompt(
+        `Enter the email of the member to remove (${removed + 1}/${toRemove}):\n` +
+        currentTeam.map(m => `- ${m.profiles?.email}`).join('\n')
+      )
+
+      if (!email) break
+
+      const memberIndex = currentTeam.findIndex(m => m.profiles?.email === email)
+      if (memberIndex === -1) {
+        alert('Member not found in this team. Please type the exact email from the list.')
+        continue
+      }
+
+      const member = currentTeam[memberIndex]
+      const { error: removeError } = await supabase
+        .from('organization_members')
+        .update({ manager_id: null, role: 'member' })
+        .eq('org_id', org.id)
+        .eq('user_id', member.user_id)
+
+      if (removeError) {
+        alert('Failed to remove member: ' + removeError.message)
+        break
+      }
+
+      currentTeam.splice(memberIndex, 1)
+      removed++
+    }
+
+    if (removed < toRemove) {
+      showToast('Limit not updated. You must remove all extra members first.', 'error')
+      fetchOrgData()
+      return
+    }
   }
 
   const { error } = await supabase
