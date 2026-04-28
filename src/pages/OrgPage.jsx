@@ -610,10 +610,10 @@ function toggleComments(postId) {
           <h1 className="text-lg font-bold text-white">{org?.name}</h1>
           <span className="text-xs text-gray-500">{org?.country}</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 justify-end">
           <button
             onClick={() => navigate('/posts')}
-            className="text-sm bg-gray-800 hover:bg-gray-700 text-white px-4 py-1.5 rounded-lg transition"
+            className="text-xs sm:text-sm px-3 sm:px-4 py-1.5 rounded-lg w-full sm:w-auto"
           >
             All Posts
           </button>
@@ -740,11 +740,11 @@ function toggleComments(postId) {
                 {/* Footer */}
                 {/* Footer */}
 <div className="mt-4 pt-3 border-t border-gray-800">
-  <div className="flex items-center justify-between">
+  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
     <p className="text-xs text-gray-500">
       by <span className="text-gray-400">{post.profiles?.email}</span>
     </p>
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap gap-2">
   {canApprove && post.status === 'pending' && (
     <button
       onClick={() => handleApprove(post.id)}
@@ -802,14 +802,14 @@ function toggleComments(postId) {
             <div className="w-6 h-6 rounded-full bg-indigo-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
               {comment.profiles?.email?.slice(0, 1).toUpperCase()}
             </div>
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 sm:w-auto">
               <p className="text-xs text-gray-400 font-medium">{comment.profiles?.email}</p>
               <p className="text-sm text-white mt-0.5">{comment.content}</p>
             </div>
             {(comment.user_id === user.id || ['admin', 'owner'].includes(role)) && (
               <button
                 onClick={() => handleDeleteComment(comment.id, post.id)}
-                className="text-xs text-red-400 hover:text-red-300 transition shrink-0"
+                className="text-xs text-red-400 hover:text-red-300 transition shrink-0 ml-auto sm:ml-0"
               >
                 ✕
               </button>
@@ -819,7 +819,7 @@ function toggleComments(postId) {
       )}
 
       {/* Add comment input */}
-      <div className="flex gap-2 mt-2">
+      <div className="flex flex-col sm:flex-row gap-2 mt-2">
         <input
           type="text"
           placeholder="Write a comment..."
@@ -862,8 +862,8 @@ function toggleComments(postId) {
   const myContentMakers = members.filter(m => m.manager_id === member.user_id)
 
   return (
-    <div key={member.user_id} className="bg-gray-900 border border-gray-800 rounded-xl px-4 py-3">
-      <div className="flex items-center gap-3">
+    <div key={member.user_id} className="bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 hover:border-gray-700 transition">
+      <div className="flex items-start sm:items-center gap-3 flex-wrap">
         <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
           {initials}
         </div>
@@ -902,7 +902,7 @@ function toggleComments(postId) {
                 Content Makers: <span className="text-white">{myContentMakers.length} / {member.team_size_limit || 0}</span>
               </p>
               {(role === 'owner' || role === 'admin') && (
-                <div className="flex items-center gap-1 mt-1">
+                <div className="flex flex-wrap items-center gap-1 mt-1">
                   <span className="text-xs text-gray-500">Limit:</span>
                   <input
                     type="number"
@@ -969,11 +969,11 @@ function toggleComments(postId) {
         {members
           .filter(m => m.role === 'admin')
           .map(member => (
-            <div key={member.user_id} className="flex items-center justify-between bg-gray-800 rounded-lg px-3 py-2">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 bg-gray-800 rounded-lg px-3 py-2">
               <p className="text-xs text-white truncate">{member.profiles?.email}</p>
               <button
                 onClick={() => handleTransferOwnership(member.user_id)}
-                className="text-xs bg-yellow-700 hover:bg-yellow-600 text-white px-2 py-1 rounded-lg transition ml-2 shrink-0"
+                className="text-xs bg-yellow-700 hover:bg-yellow-600 text-white px-2 py-1 rounded-lg transition ml-2 shrink-0 whitespace-nowrap"
               >
                 Transfer
               </button>

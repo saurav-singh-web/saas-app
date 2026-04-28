@@ -71,34 +71,50 @@ function Invitations({ user, onAccepted, showToast }) {
   if (loading) return null
   if (invitations.length === 0) return null
 
-  return (
-    <div className="bg-indigo-950 border border-indigo-800 rounded-xl p-4 sm:p-5 mb-6">
-      <h3 className="text-xs font-semibold text-indigo-300 uppercase tracking-wider mb-3">Pending Invitations</h3>
-      <div className="space-y-3">
-        {invitations.map(invite => (
-          <div key={invite.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-indigo-900 rounded-lg px-4 py-3 gap-3">
-            <p className="text-sm text-white">
-              Invited to <strong>{invite.organizations?.name}</strong>
-            </p>
-            <div className="flex gap-2 shrink-0">
-              <button
-                onClick={() => handleAccept(invite)}
-                className="flex-1 sm:flex-none text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg transition"
-              >
-                Accept
-              </button>
-              <button
-                onClick={() => handleDecline(invite)}
-                className="flex-1 sm:flex-none text-xs bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded-lg transition"
-              >
-                Decline
-              </button>
-            </div>
+ return (
+  <div className="bg-indigo-950/70 backdrop-blur border border-indigo-800 rounded-xl p-3 sm:p-5 mb-6">
+
+    <h3 className="text-[11px] sm:text-xs font-semibold text-indigo-300 uppercase tracking-wider mb-3">
+      Pending Invitations
+    </h3>
+
+    <div className="space-y-3">
+      {invitations.map(invite => (
+        <div
+          key={invite.id}
+          className="flex flex-col sm:flex-row sm:items-center sm:justify-between 
+          bg-indigo-900/70 rounded-lg px-3 sm:px-4 py-3 gap-3"
+        >
+          {/* Text */}
+          <p className="text-xs sm:text-sm text-white leading-snug">
+            Invited to <strong className="break-words">
+              {invite.organizations?.name}
+            </strong>
+          </p>
+
+          {/* Buttons */}
+          <div className="flex gap-2 w-full sm:w-auto">
+            <button
+              onClick={() => handleAccept(invite)}
+              className="flex-1 sm:flex-none text-xs bg-indigo-600 hover:bg-indigo-500 
+              text-white px-3 py-1.5 rounded-lg transition active:scale-95"
+            >
+              Accept
+            </button>
+
+            <button
+              onClick={() => handleDecline(invite)}
+              className="flex-1 sm:flex-none text-xs bg-gray-700 hover:bg-gray-600 
+              text-white px-3 py-1.5 rounded-lg transition active:scale-95"
+            >
+              Decline
+            </button>
           </div>
-        ))}
-      </div>
+        </div>
+      ))}
     </div>
-  )
+  </div>
+)
 }
 
 export default Invitations

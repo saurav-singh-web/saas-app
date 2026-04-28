@@ -46,43 +46,57 @@ function CreateOrg({ onCreated, showToast }) {
     if (onCreated) onCreated()
   }
 
-  return (
-    <div>
-      <h2 className="text-xl font-bold text-white mb-4">Create an Organization</h2>
-      <div className="space-y-3 max-w-md">
-        <input
-          type="text"
-          placeholder="Organization name"
-          value={name}
-          onChange={handleNameChange}
-          className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        />
-        <input
-          type="text"
-          placeholder="Slug"
-          value={slug}
-          onChange={(e) => setSlug(e.target.value)}
-          className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        />
-        <select
-          value={country}
-          onChange={(e) => setCountry(e.target.value)}
-          className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        >
-          <option value="">Select a country</option>
-          {countries.map(c => (
-            <option key={c} value={c}>{c}</option>
-          ))}
-        </select>
-        <button
-          onClick={handleCreate}
-          className="bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-lg px-6 py-2.5 transition"
-        >
-          Create
-        </button>
-      </div>
+ return (
+  <div className="w-full">
+
+    <h2 className="text-lg sm:text-xl font-semibold text-white mb-4">
+      Create an Organization
+    </h2>
+
+    <div className="space-y-3 w-full max-w-md">
+
+      <input
+        type="text"
+        placeholder="Organization name"
+        value={name}
+        onChange={handleNameChange}
+        className="w-full bg-gray-800/60 border border-gray-700 text-white rounded-lg px-3 sm:px-4 py-2.5 text-sm 
+        focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+      />
+
+      <input
+        type="text"
+        placeholder="Slug"
+        value={slug}
+        onChange={(e) => setSlug(e.target.value)}
+        className="w-full bg-gray-800/60 border border-gray-700 text-white rounded-lg px-3 sm:px-4 py-2.5 text-sm 
+        focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+      />
+
+      <select
+        value={country}
+        onChange={(e) => setCountry(e.target.value)}
+        className="w-full bg-gray-800/60 border border-gray-700 text-white rounded-lg px-3 sm:px-4 py-2.5 text-sm 
+        focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+      >
+        <option value="">Select a country</option>
+        {countries.map(c => (
+          <option key={c} value={c}>{c}</option>
+        ))}
+      </select>
+
+      <button
+        onClick={handleCreate}
+        className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-500 
+        text-white text-sm font-medium rounded-lg px-5 py-2.5 
+        transition active:scale-95 shadow-md shadow-indigo-600/20"
+      >
+        Create
+      </button>
+
     </div>
-  )
+  </div>
+)
 }
 
 export default CreateOrg

@@ -23,26 +23,33 @@ function Toast({ message, type, onClose }) {
   }
 
   return (
-    <div
-      className={`fixed top-6 left-1/2 -translate-x-1/2 z-50 
-      ${colors[type] || colors.info} 
-      text-white px-5 py-3 rounded-xl shadow-lg flex items-center gap-3
-      transition-all duration-300
-      ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-5'}
-      `}
+  <div
+    className={`fixed top-4 sm:top-6 left-1/2 -translate-x-1/2 z-50 
+    w-[90%] sm:w-auto max-w-md
+    ${colors[type] || colors.info} 
+    text-white px-4 sm:px-5 py-2.5 sm:py-3 rounded-xl shadow-lg 
+    flex items-center justify-between gap-3
+    transition-all duration-300
+    ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-5'}
+    `}
+  >
+    {/* Message */}
+    <span className="text-xs sm:text-sm font-medium leading-snug break-words">
+      {message}
+    </span>
+
+    {/* Close */}
+    <button
+      onClick={() => {
+        setVisible(false)
+        setTimeout(onClose, 300)
+      }}
+      className="text-white opacity-70 hover:opacity-100 text-base sm:text-lg leading-none shrink-0"
     >
-      <span className="text-sm font-medium">{message}</span>
-      <button
-        onClick={() => {
-          setVisible(false)
-          setTimeout(onClose, 300)
-        }}
-        className="text-white opacity-70 hover:opacity-100 text-lg leading-none"
-      >
-        ✕
-      </button>
-    </div>
-  )
+      ✕
+    </button>
+  </div>
+)
 }
 
 export default Toast
