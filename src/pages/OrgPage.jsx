@@ -203,18 +203,108 @@ async function handleLike(postId) {
   async function handleRoleChange(userId, newRole) {
   if (!window.confirm(`Change role to "${newRole}"?`)) return
 
+  // If changing to content_maker — need to assign a team leader
+  if (newRole === 'content_maker') {
+    const teamLeaders = members.filter(m => m.role === 'team_leader')
+    
+    if (teamLeaders.length === 0) {
+      showToast('No team leaders available. Assign a team leader first.', 'error')
+      return
+    }
+
+    // Show team leader selection
+    const teamLeaderEmail = window.prompt(
+      'Enter team leader email to assign this content maker to:\n' +
+      teamLeaders.map(tl => `- ${tl.profiles?.email}`).join('\n')
+    )
+
+    if (!teamLeaderEmail) return
+
+    const selectedLeader = teamLeaders.find(tl => tl.profiles?.email === teamLeaderEmail)
+
+    if (!selectedLeader) {
+      showToast('Team leader not found.', 'error')
+      return
+    }
+
+    // Check team leader's current content maker count
+    const { count } = await supabase
+      .from('organization_members')
+      .select('id', { count: 'exact' })
+      .eq('org_id', org.id)
+      .eq('manager_id', selectedLeader.user_id)
+      .eq('role', 'content_maker')
+
+    if (count >= selectedLeader.team_size_limit) {
+      showToast(`This team leader has reached their limit of ${selectedLeader.team_size_limit} content makers.`, 'error')
+      return
+    }
+
+    // Assign role and manager
+    const { error } = await supabase
+      .from('organization_members')
+      .update({ role: newRole, manager_id: selectedLeader.user_id })
+      .eq('org_id', org.id)
+      .eq('user_id', userId)
+
+    if (error) {
+      showToast('Failed to update role.', 'error')
+      return
+    }
+
+    showToast('Role updated and assigned to team leader.', 'success')
+    fetchOrgData()
+    return
+  }
+
+  // For all other roles
   const { error } = await supabase
     .from('organization_members')
-    .update({ role: newRole })
+    .update({ role: newRole, manager_id: null })
     .eq('org_id', org.id)
     .eq('user_id', userId)
 
   if (error) {
-    showToast('Failed to update role', 'error')
+    showToast('Failed to update role.', 'error')
     return
   }
 
-  showToast('Role updated successfully', 'success')
+  showToast('Role updated.', 'success')
+  fetchOrgData()
+}
+
+async function handleUpdateTeamLimit(userId, newLimit) {
+  const limit = parseInt(newLimit)
+  if (isNaN(limit) || limit < 1) {
+    showToast('Invalid limit.', 'error')
+    return
+  }
+
+  // Check current count first
+  const { count } = await supabase
+    .from('organization_members')
+    .select('id', { count: 'exact' })
+    .eq('org_id', org.id)
+    .eq('manager_id', userId)
+    .eq('role', 'content_maker')
+
+  if (limit < count) {
+    showToast(`This team leader already has ${count} content makers. Limit must be at least ${count}.`, 'error')
+    return
+  }
+
+  const { error } = await supabase
+    .from('organization_members')
+    .update({ team_size_limit: limit })
+    .eq('org_id', org.id)
+    .eq('user_id', userId)
+
+  if (error) {
+    showToast('Failed to update limit.', 'error')
+    return
+  }
+
+  showToast('Team size limit updated.', 'success')
   fetchOrgData()
 }
 
@@ -345,54 +435,53 @@ async function handleAssign(postId, userId) {
   fetchPosts(org.id)
 }
 
-async function handleTransferOwnership(userId) {
-  if (!window.confirm('Transfer ownership to this admin? You will become an admin.')) return
+  async function handleTransferOwnership(userId) {
+    if (!window.confirm('Transfer ownership to this admin? You will become an admin.')) return
 
-  // Step 1 — demote current owner to admin first
-  const { error: oldOwnerError } = await supabase
-    .from('organization_members')
-    .update({ role: 'admin' })
-    .eq('org_id', org.id)
-    .eq('user_id', user.id)
+    const { error: oldOwnerError } = await supabase
+      .from('organization_members')
+      .update({ role: 'admin' })
+      .eq('org_id', org.id)
+      .eq('user_id', user.id)
 
-  if (oldOwnerError) {
-    showToast('Failed to update your role.', 'error')
-    return
+    if (oldOwnerError) {
+      showToast('Failed to update your role.', 'error')
+      return
+    }
+
+    const { error: newOwnerError } = await supabase
+      .from('organization_members')
+      .update({ role: 'owner' })
+      .eq('org_id', org.id)
+      .eq('user_id', userId)
+
+    if (newOwnerError) {
+      showToast('Failed to transfer ownership.', 'error')
+      return
+    }
+
+    showToast('Ownership transferred successfully.', 'success')
+    fetchOrgData()
   }
 
-  // Step 2 — promote new owner
-  const { error: newOwnerError } = await supabase
-    .from('organization_members')
-    .update({ role: 'owner' })
-    .eq('org_id', org.id)
-    .eq('user_id', userId)
+  async function handleDeleteOrg() {
+    if (!window.confirm(`Are you sure you want to delete "${org.name}"? This cannot be undone.`)) return
+    if (!window.confirm('This will delete all posts, members and invites. Are you absolutely sure?')) return
 
-  if (newOwnerError) {
-    showToast('Failed to transfer ownership.', 'error')
-    return
+    const { error } = await supabase
+      .from('organizations')
+      .delete()
+      .eq('id', org.id)
+
+    if (error) {
+      showToast('Failed to delete organization.', 'error')
+      return
+    }
+
+    showToast('Organization deleted.', 'info')
+    navigate('/')
   }
 
-  showToast('Ownership transferred successfully.', 'success')
-  fetchOrgData()
-}
-
-async function handleDeleteOrg() {
-  if (!window.confirm(`Are you sure you want to delete "${org.name}"? This cannot be undone.`)) return
-  if (!window.confirm('This will delete all posts, members and invites. Are you absolutely sure?')) return
-
-  const { error } = await supabase
-    .from('organizations')
-    .delete()
-    .eq('id', org.id)
-
-  if (error) {
-    showToast('Failed to delete organization.', 'error')
-    return
-  }
-
-  showToast('Organization deleted.', 'info')
-  navigate('/')
-}
 
 
 async function fetchComments(postId) {
@@ -697,53 +786,89 @@ function toggleComments(postId) {
           <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">Members</h2>
           <div className="space-y-2">
             {members.map(member => {
-              const email = member.profiles?.email || 'Unknown'
-              const initials = email.slice(0, 2).toUpperCase()
-              const roleBadgeColor = {
-                owner: 'bg-yellow-500 text-yellow-950',
-                admin: 'bg-blue-500 text-blue-950',
-                member: 'bg-green-500 text-green-950',
-                viewer: 'bg-gray-500 text-gray-300',
-                content_maker: 'bg-purple-500 text-purple-950',
-                team_leader: 'bg-orange-500 text-orange-950',
-              }[member.role] || 'bg-gray-500 text-gray-300'
+  const email = member.profiles?.email || 'Unknown'
+  const initials = email.slice(0, 2).toUpperCase()
+  const roleBadgeColor = {
+    owner: 'bg-yellow-500 text-yellow-950',
+    admin: 'bg-blue-500 text-blue-950',
+    member: 'bg-green-500 text-green-950',
+    viewer: 'bg-gray-500 text-gray-300',
+    content_maker: 'bg-purple-500 text-purple-950',
+    team_leader: 'bg-orange-500 text-orange-950',
+  }[member.role] || 'bg-gray-500 text-gray-300'
 
-              return (
-                <div key={member.user_id} className="flex items-center gap-3 bg-gray-900 border border-gray-800 rounded-xl px-4 py-3">
-                  <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
-                    {initials}
-                  </div>                     
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-medium text-white truncate">{email}</p>
-  {                 (role === 'owner' || role === 'admin') && member.role !== 'owner' ? (
-                        <select
-                        value={member.role}
-                        onChange={(e) => handleRoleChange(member.user_id, e.target.value)}
-                        className="mt-1 bg-gray-800 text-white text-xs rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500 w-full"
-                         >
-                        <option value="member">Member</option>
-                        <option value="content_maker">Content Maker</option>
-                        <option value="team_leader">Team Leader</option>
-                        <option value="admin">Admin</option>
-                        </select>
-                        ) : (
-                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full capitalize ${roleBadgeColor}`}>
-                        {member.role}
-                         </span>
-                         )}
-                        {(role === 'owner' || (role === 'admin' && !['owner', 'admin'].includes(member.role)))
-                         && member.user_id !== user.id && (
-                        <button
-                        onClick={() => handleRemoveMember(member.user_id)}
-                        className="mt-1 text-xs text-red-400 hover:text-red-300 transition block"
-                        >
-                         Remove
-                        </button>
-                          )}
-                        </div>  
+  const myContentMakers = members.filter(m => m.manager_id === member.user_id)
+
+  return (
+    <div key={member.user_id} className="bg-gray-900 border border-gray-800 rounded-xl px-4 py-3">
+      <div className="flex items-center gap-3">
+        <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
+          {initials}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-medium text-white truncate">{email}</p>
+          {(role === 'owner' || role === 'admin') && member.role !== 'owner' ? (
+            <select
+              value={member.role}
+              onChange={(e) => handleRoleChange(member.user_id, e.target.value)}
+              className="mt-1 bg-gray-800 text-white text-xs rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500 w-full"
+            >
+              <option value="member">Member</option>
+              <option value="content_maker">Content Maker</option>
+              <option value="team_leader">Team Leader</option>
+              <option value="admin">Admin</option>
+            </select>
+          ) : (
+            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full capitalize ${roleBadgeColor}`}>
+              {member.role}
+            </span>
+          )}
+
+          {/* Show manager for content_maker */}
+          {member.role === 'content_maker' && member.manager_id && (
+            <p className="text-xs text-gray-500 mt-1">
+              Reports to: <span className="text-gray-400">
+                {members.find(m => m.user_id === member.manager_id)?.profiles?.email || 'Unknown'}
+              </span>
+            </p>
+          )}
+
+          {/* Show team info for team_leader */}
+          {member.role === 'team_leader' && (
+            <div className="mt-1">
+              <p className="text-xs text-gray-500">
+                Team: {myContentMakers.length} / {member.team_size_limit} content makers
+              </p>
+              {(role === 'owner' || role === 'admin') && (
+                <div className="flex items-center gap-1 mt-1">
+                  <span className="text-xs text-gray-500">Limit:</span>
+                  <input
+                    type="number"
+                    defaultValue={member.team_size_limit}
+                    min={myContentMakers.length || 1}
+                    onBlur={(e) => handleUpdateTeamLimit(member.user_id, e.target.value)}
+                    className="w-14 bg-gray-800 text-white text-xs rounded px-2 py-0.5 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  />
                 </div>
-              )
-            })}
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Remove button */}
+        {(role === 'owner' || (role === 'admin' && !['owner', 'admin'].includes(member.role)))
+          && member.user_id !== user.id && (
+          <button
+            onClick={() => handleRemoveMember(member.user_id)}
+            className="text-xs text-red-400 hover:text-red-300 transition shrink-0"
+          >
+            Remove
+          </button>
+        )}
+      </div>
+    </div>
+  )
+})}
           </div>
           {/* Invite section */}
 {(role === 'owner' || role === 'admin') && (
