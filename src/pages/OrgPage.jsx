@@ -225,35 +225,27 @@ async function handleInvite() {
     return
   }
 
-  const isAlreadyMember = members.some(m => m.user_id === profileData.id)
-  if (isAlreadyMember) {
-    showToast('This user is already a member.', 'error')
-    return
-  }
-
-  const { data: existingInvite } = await supabase
-    .from('invitations')
-    .select('status')
+  // Check directly from database if already a member
+  const { data: existingMember } = await supabase
+    .from('organization_members')
+    .select('id')
     .eq('org_id', org.id)
-    .eq('invited_user_id', profileData.id)
+    .eq('user_id', profileData.id)
     .maybeSingle()
 
-  if (existingInvite?.status === 'accepted') {
+  if (existingMember) {
     showToast('This user is already a member.', 'error')
     return
   }
 
-  if (existingInvite?.status === 'pending') {
-    showToast('Invite already sent. Waiting for user to accept.', 'info')
-    return
-  }
-
+  // Delete any old invite
   await supabase
     .from('invitations')
     .delete()
     .eq('org_id', org.id)
     .eq('invited_user_id', profileData.id)
 
+  // Create fresh invite
   const { error: insertError } = await supabase
     .from('invitations')
     .insert({
@@ -271,6 +263,94 @@ async function handleInvite() {
   setInviteEmail('')
 }
 
+async function handleRemoveMember(userId) {
+  if (!window.confirm('Remove this member from the organization?')) return
+
+  const { error } = await supabase
+    .from('organization_members')
+    .delete()
+    .eq('org_id', org.id)
+    .eq('user_id', userId)
+
+  if (error) {
+    showToast('Failed to remove member.', 'error')
+    return
+  }
+  await supabase
+    .from('invitations')
+    .delete()
+    .eq('org_id', org.id)
+    .eq('invited_user_id', userId)
+
+  showToast('Member removed.', 'info')
+  fetchOrgData()
+}
+
+async function handleDeletePost(postId) {
+  if (!window.confirm('Delete this post?')) return
+
+  const { error } = await supabase
+    .from('posts')
+    .delete()
+    .eq('id', postId)
+
+  if (error) {
+    showToast('Failed to delete post.', 'error')
+    return
+  }
+
+  showToast('Post deleted.', 'info')
+  fetchPosts(org.id)
+}
+
+async function handleTransferOwnership(userId) {
+  if (!window.confirm('Transfer ownership to this admin? You will become an admin.')) return
+
+  // Step 1 — demote current owner to admin first
+  const { error: oldOwnerError } = await supabase
+    .from('organization_members')
+    .update({ role: 'admin' })
+    .eq('org_id', org.id)
+    .eq('user_id', user.id)
+
+  if (oldOwnerError) {
+    showToast('Failed to update your role.', 'error')
+    return
+  }
+
+  // Step 2 — promote new owner
+  const { error: newOwnerError } = await supabase
+    .from('organization_members')
+    .update({ role: 'owner' })
+    .eq('org_id', org.id)
+    .eq('user_id', userId)
+
+  if (newOwnerError) {
+    showToast('Failed to transfer ownership.', 'error')
+    return
+  }
+
+  showToast('Ownership transferred successfully.', 'success')
+  fetchOrgData()
+}
+
+async function handleDeleteOrg() {
+  if (!window.confirm(`Are you sure you want to delete "${org.name}"? This cannot be undone.`)) return
+  if (!window.confirm('This will delete all posts, members and invites. Are you absolutely sure?')) return
+
+  const { error } = await supabase
+    .from('organizations')
+    .delete()
+    .eq('id', org.id)
+
+  if (error) {
+    showToast('Failed to delete organization.', 'error')
+    return
+  }
+
+  showToast('Organization deleted.', 'info')
+  navigate('/')
+}
 
 
 async function fetchComments(postId) {
@@ -427,6 +507,14 @@ function toggleComments(postId) {
       Approve
     </button>
   )}
+  {['admin', 'owner'].includes(role) && (
+    <button
+      onClick={() => handleDeletePost(post.id)}
+      className="text-xs bg-red-900 hover:bg-red-800 text-red-400 px-3 py-1.5 rounded-lg transition"
+    >
+      Delete
+    </button>
+  )}
   <button
     onClick={() => handleLike(post.id)}
     className={`flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg transition ${
@@ -522,25 +610,33 @@ function toggleComments(postId) {
                     {initials}
                   </div>                     
                   <div className="min-w-0 flex-1">
-                  <p className="text-xs font-medium text-white truncate">{email}</p>
-                 {(role === 'owner' || role === 'admin') && member.role !== 'owner' ? (
-                 <select
-                 value={member.role}
-                 onChange={(e) => handleRoleChange(member.user_id, e.target.value)}
-                 className="mt-1 bg-gray-800 text-white text-xs rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500 w-full"
-                >
-                <option value="member">Member</option>
-                <option value="content_maker">Content Maker</option>
-                <option value="team_leader">Team Leader</option>
-                <option value="admin">Admin</option>
-                </select>
-                ) : (
-                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full capitalize ${roleBadgeColor}`}>
-                {member.role}
-                </span>
-                  )}
-                </div>
-                  
+                    <p className="text-xs font-medium text-white truncate">{email}</p>
+  {                 (role === 'owner' || role === 'admin') && member.role !== 'owner' ? (
+                        <select
+                        value={member.role}
+                        onChange={(e) => handleRoleChange(member.user_id, e.target.value)}
+                        className="mt-1 bg-gray-800 text-white text-xs rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500 w-full"
+                         >
+                        <option value="member">Member</option>
+                        <option value="content_maker">Content Maker</option>
+                        <option value="team_leader">Team Leader</option>
+                        <option value="admin">Admin</option>
+                        </select>
+                        ) : (
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full capitalize ${roleBadgeColor}`}>
+                        {member.role}
+                         </span>
+                         )}
+                        {(role === 'owner' || (role === 'admin' && !['owner', 'admin'].includes(member.role)))
+                         && member.user_id !== user.id && (
+                        <button
+                        onClick={() => handleRemoveMember(member.user_id)}
+                        className="mt-1 text-xs text-red-400 hover:text-red-300 transition block"
+                        >
+                         Remove
+                        </button>
+                          )}
+                        </div>  
                 </div>
               )
             })}
@@ -563,6 +659,45 @@ function toggleComments(postId) {
       className="w-full bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-lg px-4 py-2.5 transition"
     >
       Send Invite
+    </button>
+  </div>
+)}
+
+
+{/* Danger zone — owner only */}
+{role === 'owner' && (
+  <div className="mt-6 border border-red-900 rounded-xl p-4">
+    <h2 className="text-sm font-semibold text-red-400 uppercase tracking-wider mb-3">
+      Danger Zone
+    </h2>
+
+    {/* Transfer ownership */}
+    <div className="mb-4">
+      <p className="text-xs text-gray-400 mb-2">Transfer ownership to a member:</p>
+      <div className="space-y-2">
+        {members
+          .filter(m => m.role === 'admin')
+          .map(member => (
+            <div key={member.user_id} className="flex items-center justify-between bg-gray-800 rounded-lg px-3 py-2">
+              <p className="text-xs text-white truncate">{member.profiles?.email}</p>
+              <button
+                onClick={() => handleTransferOwnership(member.user_id)}
+                className="text-xs bg-yellow-700 hover:bg-yellow-600 text-white px-2 py-1 rounded-lg transition ml-2 shrink-0"
+              >
+                Transfer
+              </button>
+            </div>
+          ))
+        }
+      </div>
+    </div>
+
+    {/* Delete org */}
+    <button
+      onClick={handleDeleteOrg}
+      className="w-full bg-red-900 hover:bg-red-800 text-red-400 text-sm font-medium rounded-lg px-4 py-2.5 transition"
+    >
+      Delete Organization
     </button>
   </div>
 )}
