@@ -610,14 +610,22 @@ function toggleComments(postId) {
           <h1 className="text-lg font-bold text-white">{org?.name}</h1>
           <span className="text-xs text-gray-500">{org?.country}</span>
         </div>
-        {canCreatePost && (
+        <div className="flex items-center gap-2">
           <button
-            onClick={() => setShowForm(!showForm)}
-            className="text-sm bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-1.5 rounded-lg transition"
+            onClick={() => navigate('/posts')}
+            className="text-sm bg-gray-800 hover:bg-gray-700 text-white px-4 py-1.5 rounded-lg transition"
           >
-            {showForm ? 'Cancel' : '+ New Post'}
+            All Posts
           </button>
-        )}
+          {canCreatePost && (
+            <button
+              onClick={() => setShowForm(!showForm)}
+              className="text-sm bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-1.5 rounded-lg transition"
+            >
+              {showForm ? 'Cancel' : '+ New Post'}
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 grid grid-cols-1 lg:grid-cols-3 gap-6">

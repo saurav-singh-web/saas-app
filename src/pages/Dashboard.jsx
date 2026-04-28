@@ -56,6 +56,12 @@ useEffect(() => {
         <div className="flex items-center gap-2 sm:gap-4">
           <span className="text-xs sm:text-sm text-gray-400 truncate max-w-[140px] sm:max-w-none">{user.email}</span>
           <button
+            onClick={() => navigate('/posts')}
+            className="text-xs sm:text-sm bg-gray-800 hover:bg-gray-700 text-white px-3 sm:px-4 py-1.5 rounded-lg transition"
+          >
+            All Posts
+          </button>
+          <button
             onClick={handleLogout}
             className="text-xs sm:text-sm bg-gray-800 hover:bg-gray-700 text-white px-3 sm:px-4 py-1.5 rounded-lg transition"
           >
