@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../supabaseClient'
+import Loading from '../components/Loading'
 
 function PostsFeed({ user }) {
   const [posts, setPosts] = useState([])
@@ -185,7 +186,7 @@ function PostsFeed({ user }) {
 
         {/* CONTENT */}
         {loading ? (
-          <div className="text-gray-400">Loading...</div>
+          <Loading fullScreen text="Loading posts..." />
         ) : filteredPosts.length === 0 ? (
           <div className="text-center py-20">No posts</div>
         ) : (

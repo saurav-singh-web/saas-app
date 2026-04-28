@@ -1,5 +1,6 @@
 import { useState , useEffect } from 'react'
 import { supabase } from '../supabaseClient'
+import { FcGoogle } from "react-icons/fc"
 
 function Login({ showToast }) {
   const [email, setEmail] = useState('')
@@ -155,9 +156,7 @@ return (
           bg-white text-gray-900 text-sm font-medium 
           rounded-lg py-2.5 transition"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24">
-            <path fill="#4285F4" d="M22.56 12.25..." />
-          </svg>
+          <FcGoogle size={18} />
           Continue with Google
         </button>
 

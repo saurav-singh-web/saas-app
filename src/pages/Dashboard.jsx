@@ -5,6 +5,8 @@ import OrgPanel from '../components/OrgPanel'
 import { useNavigate } from 'react-router-dom'
 import Invitations from '../components/Invitations'
 import useOrganizations from '../hooks/useOrganizations'
+import Loading from '../components/Loading'
+
 
 function Dashboard({ user, showToast }) {
   const { organizations, loading, fetchOrganizations } = useOrganizations()
@@ -133,14 +135,14 @@ useEffect(() => {
 
       {/* Content */}
       {loading ? (
-        <div className="text-gray-400 animate-pulse">Loading...</div>
+        <Loading fullScreen text="Loading posts..." />
       ) : organizations.length === 0 ? (
         <div className="text-center py-12 border border-gray-800 rounded-xl bg-gray-900/40">
           <p className="text-gray-400 text-sm sm:text-base">
             No organizations yet.
           </p>
           <p className="text-gray-600 text-xs mt-2">
-            Create your first workspace 🚀
+            Create your first workspace 
           </p>
         </div>
       ) : (

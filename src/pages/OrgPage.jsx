@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
+import Loading from '../components/Loading'
 
 function OrgPage({ user, showToast }) {
   const { slug } = useParams()
@@ -196,7 +197,7 @@ async function handleLike(postId) {
 
   if (loading) return (
     <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-      <p className="text-gray-400">Loading...</p>
+      <Loading fullScreen text="Loading posts..." />
     </div>
   )
   async function handleRoleChange(userId, newRole) {
