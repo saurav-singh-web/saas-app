@@ -30,7 +30,6 @@ function OrgPage({ user, showToast }) {
   }, [slug])
 
   async function fetchOrgData() {
-    // Step 1 — get org by slug
     const { data: orgData, error: orgError } = await supabase
       .from('organizations')
       .select('*')
@@ -235,8 +234,9 @@ async function handleLike(postId) {
       .eq('manager_id', selectedLeader.user_id)
       .eq('role', 'content_maker')
 
-    if (count >= selectedLeader.team_size_limit) {
-      showToast(`This team leader has reached their limit of ${selectedLeader.team_size_limit} content makers.`, 'error')
+    const limit = selectedLeader.team_size_limit || 0
+    if (count >= limit) {
+      showToast(`This team leader has reached their limit of ${limit} content makers. Current count is ${count}.`, 'error')
       return
     }
 
@@ -287,6 +287,11 @@ async function handleUpdateTeamLimit(userId, newLimit) {
     .eq('org_id', org.id)
     .eq('manager_id', userId)
     .eq('role', 'content_maker')
+
+  if (!window.confirm(`Are you sure you want to change the team limit to ${limit}? There are currently ${count} content makers in this team.`)) {
+    fetchOrgData()
+    return
+  }
 
   if (limit < count) {
     showToast(`This team leader already has ${count} content makers. Limit must be at least ${count}.`, 'error')
@@ -826,8 +831,8 @@ function toggleComments(postId) {
 
           {/* Show manager for content_maker */}
           {member.role === 'content_maker' && member.manager_id && (
-            <p className="text-xs text-gray-500 mt-1">
-              Reports to: <span className="text-gray-400">
+            <p className="text-xs text-indigo-400 mt-1 font-semibold">
+              Belongs to Team: <span className="text-white">
                 {members.find(m => m.user_id === member.manager_id)?.profiles?.email || 'Unknown'}
               </span>
             </p>
@@ -836,15 +841,15 @@ function toggleComments(postId) {
           {/* Show team info for team_leader */}
           {member.role === 'team_leader' && (
             <div className="mt-1">
-              <p className="text-xs text-gray-500">
-                Team: {myContentMakers.length} / {member.team_size_limit} content makers
+              <p className="text-xs text-indigo-400 font-semibold mb-1">
+                Content Makers: <span className="text-white">{myContentMakers.length} / {member.team_size_limit || 0}</span>
               </p>
               {(role === 'owner' || role === 'admin') && (
                 <div className="flex items-center gap-1 mt-1">
                   <span className="text-xs text-gray-500">Limit:</span>
                   <input
                     type="number"
-                    defaultValue={member.team_size_limit}
+                    defaultValue={member.team_size_limit || 0}
                     min={myContentMakers.length || 1}
                     onBlur={(e) => handleUpdateTeamLimit(member.user_id, e.target.value)}
                     className="w-14 bg-gray-800 text-white text-xs rounded px-2 py-0.5 focus:outline-none focus:ring-1 focus:ring-indigo-500"
