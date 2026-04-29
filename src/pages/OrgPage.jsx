@@ -269,7 +269,23 @@ async function handleLike(postId) {
     showToast('Failed to update role.', 'error')
     return
   }
+  const wasTeamLeader = members.find(m => m.user_id === userId)?.role === 'team_leader'
+  if (wasTeamLeader) {
+    const { error: cmError } = await supabase
+      .from('organization_members')
+      .update({ role: 'member', manager_id: null })
+      .eq('org_id', org.id)
+      .eq('manager_id', userId)
 
+    if (cmError) {
+      showToast('Role updated but failed to reassign content makers.', 'error')
+    } else {
+      showToast('Role updated. Content makers have been moved to member.', 'success')
+    }
+
+    fetchOrgData()
+    return
+  }
   showToast('Role updated.', 'success')
   fetchOrgData()
 }
@@ -415,6 +431,17 @@ async function handleInvite() {
 
 async function handleRemoveMember(userId) {
   if (!window.confirm('Remove this member from the organization?')) return
+
+  const wasTeamLeader = members.find(m => m.user_id === userId)?.role === 'team_leader'
+
+  // If team leader — reassign their content makers to member first
+  if (wasTeamLeader) {
+    await supabase
+      .from('organization_members')
+      .update({ role: 'member', manager_id: null })
+      .eq('org_id', org.id)
+      .eq('manager_id', userId)
+  }
 
   const { error } = await supabase
     .from('organization_members')
