@@ -157,7 +157,7 @@ function PostsFeed({ user }) {
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
 
         {/* Filters */}
-        <div className="flex gap-2 flex-wrap mb-6">
+        <div className="flex gap-2 mb-6 overflow-x-auto no-scrollbar whitespace-nowrap">
           <button
             onClick={() => setSelectedOrg('all')}
             className={`text-sm px-4 py-1.5 rounded-full ${
@@ -192,7 +192,7 @@ function PostsFeed({ user }) {
         ) : (
           <div
   className="
-    h-[calc(100vh-140px)]
+    h-[calc(100dvh-140px)]
     overflow-y-scroll
     no-scrollbar
     snap-y snap-mandatory
@@ -213,7 +213,7 @@ function PostsFeed({ user }) {
         key={post.id}
         className="
           snap-start snap-always
-          h-[calc(100vh-140px)]
+          h-[calc(100dvh-140px)]
           w-full
           flex items-center justify-center
           px-2
@@ -250,7 +250,7 @@ function PostsFeed({ user }) {
             </div>
 
             {/* Content */}
-            <div className="flex-grow flex flex-col justify-center px-4 sm:px-0">
+            <div className="flex-grow flex flex-col justify-center px-4 sm:px-0 pb-6">
               <h2 className="text-xl font-semibold mb-3">
                 {post.title}
               </h2>
@@ -261,7 +261,7 @@ function PostsFeed({ user }) {
             </div>
 
             {/* Footer */}
-            <div className="flex justify-between items-center px-4 pb-4 sm:px-0 sm:pb-0 border-t border-gray-800 pt-3">
+            <div className="flex justify-between items-center px-4 pb-6 sm:px-0 sm:pb-0 border-t border-gray-800 pt-3">
               <span className="text-xs text-gray-500">
                 {post.profiles?.email}
               </span>
