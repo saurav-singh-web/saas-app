@@ -60,7 +60,7 @@ useEffect(() => {
     <div className="relative border-b border-gray-800 bg-gray-900/70 backdrop-blur-xl px-3 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
 
       {/* Left */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 min-w-0">
         <div className="h-8 w-8 sm:h-9 sm:w-9 bg-indigo-600 rounded-lg flex items-center justify-center font-bold">
           A
         </div>
@@ -70,15 +70,15 @@ useEffect(() => {
       </div>
 
       {/* Right */}
-      <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 w-full sm:w-auto">
 
-        <span className="text-[11px] sm:text-sm text-gray-400 truncate max-w-[120px] sm:max-w-none">
+        <span className="text-[11px] sm:text-sm text-gray-400 truncate max-w-[120px] sm:max-w-[200px]">
           {user.email}
         </span>
 
         <button
           onClick={() => navigate('/posts')}
-          className="text-xs sm:text-sm bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded-lg transition"
+          className="w-full sm:w-auto text-xs sm:text-sm bg-gray-800 hover:bg-gray-700 px-3 py-1.5 rounded-lg transition"
         >
           Posts
         </button>
@@ -114,7 +114,7 @@ useEffect(() => {
 
         <button
           onClick={() => setShowCreate(!showCreate)}
-          className="w-full sm:w-auto text-sm bg-indigo-600 hover:bg-indigo-500 px-4 py-2 rounded-lg transition shadow"
+          className="w-full sm:w-auto text-sm bg-indigo-600 hover:bg-indigo-500 px-4 py-2 rounded-lg transition shadow whitespace-nowrap"
         >
           {showCreate ? 'Cancel' : '+ New Org'}
         </button>
@@ -137,7 +137,7 @@ useEffect(() => {
       {loading ? (
         <Loading fullScreen text="Loading posts..." />
       ) : organizations.length === 0 ? (
-        <div className="text-center py-12 border border-gray-800 rounded-xl bg-gray-900/40">
+        <div className="text-center py-10 sm:py-12 px-4 border border-gray-800 rounded-xl bg-gray-900/40">
           <p className="text-gray-400 text-sm sm:text-base">
             No organizations yet.
           </p>
@@ -146,18 +146,18 @@ useEffect(() => {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {organizations.map(org => (
             <div
               key={org.id}
               onClick={() => navigate(`/org/${org.slug}`)}
-              className="bg-gray-900/60 border border-gray-800 rounded-xl p-4 sm:p-5 cursor-pointer transition hover:border-indigo-500"
+              className="bg-gray-900/60 border border-gray-800 rounded-xl p-4 sm:p-5 cursor-pointer transition hover:border-indigo-500 hover:scale-[1.01] active:scale-[0.98]"
             >
               <h3 className="text-base sm:text-lg font-semibold">
                 {org.name}
               </h3>
 
-              <p className="text-xs sm:text-sm text-gray-400 mt-1 break-all">
+              <p className="text-xs sm:text-sm text-gray-400 mt-1 break-all min-w-0">
                 Slug: {org.slug}
               </p>
 
